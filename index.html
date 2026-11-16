@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Janu TTS – Teks jadi suara</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F3; --panel:#FFFFFF; --ink:#16212E; --muted:#5C6B7A; --line:#D5DBE2;
+  --accent:#2B4BD8; --accent-ink:#FFFFFF; --wave:#B9C3D0; --danger:#B3261E; --ok:#1F7A4D;
+  --head:"Bricolage Grotesque",system-ui,sans-serif; --body:"Figtree",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#121820; --panel:#1A222D; --ink:#E8EDF2; --muted:#93A0AE; --line:#2B3643;
+    --accent:#7D95FF; --accent-ink:#0E1522; --wave:#3A4656; --danger:#FF8A80; --ok:#6FD6A0;}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--body);padding:28px 20px 64px}
+main{max-width:1040px;margin:0 auto}
+h1,h2{font-family:var(--head);margin:0;line-height:1.15}
+h1{font-size:clamp(28px,4vw,40px);font-weight:700}
+h2{font-size:18px;font-weight:700;margin-bottom:12px}
+.sub{color:var(--muted);margin:6px 0 24px;max-width:60ch}
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
+label:first-of-type{margin-top:0}
+input[type=text],input[type=password],textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:200px;resize:vertical;line-height:1.6}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{font:500 13px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);
+  border-radius:999px;padding:4px 12px;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.count{margin-left:auto;font-size:13px;color:var(--muted)}
+.range{display:grid;grid-template-columns:1fr 44px;gap:10px;align-items:center}
+.range output{font-size:13px;color:var(--muted);text-align:right}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.hint{font-size:13px;color:var(--muted);margin:6px 0 0}
+.check{display:flex;gap:8px;align-items:center;font-weight:400;font-size:14px;margin-top:10px}
+button.primary{font:600 16px var(--body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;
+  padding:12px 22px;cursor:pointer}
+button.primary:disabled{opacity:.55;cursor:wait}
+button.ghost,a.ghost{font:500 14px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);
+  border-radius:8px;padding:7px 14px;cursor:pointer;text-decoration:none}
+button.ghost:hover,a.ghost:hover{border-color:var(--accent)}
+.status{font-size:14px;min-height:22px}
+.status.err{color:var(--danger)} .status.ok{color:var(--ok)}
+.stage{margin-top:20px}
+canvas{width:100%;height:120px;display:block;cursor:pointer}
+.empty{color:var(--muted);padding:38px 0;text-align:center}
+audio{width:100%;margin-top:12px}
+.history{list-style:none;margin:0;padding:0}
+.history li{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.history li:first-child{border-top:0}
+.history .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.head{display:flex;gap:14px;align-items:center;margin-bottom:6px}
+.dot{width:44px;height:44px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 35% 30%,var(--accent),color-mix(in srgb,var(--accent) 35%,var(--panel)))}
+@media (prefers-reduced-motion:no-preference){button.primary{transition:transform .12s}button.primary:active{transform:scale(.98)}}
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <div class="dot" aria-hidden="true"></div>
+    <h1>Janu TTS</h1>
+  </div>
+  <p class="sub">Ketik teks, lalu hasilkan suara narator Janu berbahasa Indonesia. Suara dibuat lewat ElevenLabs memakai API key milikmu sendiri.</p>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Teks</h2>
+      <label for="text" class="sr" style="position:absolute;left:-9999px">Teks yang akan diucapkan</label>
+      <textarea id="text" placeholder="Tulis narasi di sini…">Di sebuah desa kecil di kaki gunung, hiduplah seorang pengrajin lampu. [whispers] Setiap malam, ia menyalakan satu lampu untuk menuntun para musafir pulang.</textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="chip" data-tag="[whispers]">[whispers]</button>
+        <button class="chip" data-tag="[giggles]">[giggles]</button>
+        <button class="chip" data-tag="[sarcastically]">[sarcastically]</button>
+        <button class="chip" data-tag="[sighs]">[sighs]</button>
+        <span class="count" id="count">0 / 5000</span>
+      </div>
+      <p class="hint">Tag dalam kurung siku hanya berfungsi di model v3 atau v4. Pada model lain, hapus tag agar tidak ikut terbaca.</p>
+      <div class="row" style="margin-top:18px">
+        <button class="primary" id="go">Buat suara</button>
+        <span class="status" id="status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2>Pengaturan</h2>
+      <label for="key">ElevenLabs API key</label>
+      <input type="password" id="key" autocomplete="off" placeholder="sk_…">
+      <label class="check"><input type="checkbox" id="remember"> Ingat di browser ini</label>
+
+      <label for="voice">Voice ID</label>
+      <input type="text" id="voice" value="TIXYCOMzK2Vw9OZovSLs" spellcheck="false">
+
+      <label for="model">Model</label>
+      <input type="text" id="model" list="models" value="eleven_v3" spellcheck="false">
+      <datalist id="models">
+        <option value="eleven_v3">
+        <option value="eleven_multilingual_v2">
+        <option value="eleven_flash_v2_5">
+      </datalist>
+      <p class="hint">Bisa diketik manual jika ElevenLabs merilis ID model baru.</p>
+
+      <label for="stability">Stabilitas</label>
+      <div class="range"><input type="range" id="stability" min="0" max="1" step="0.05" value="0.5"><output id="o-stability">0.5</output></div>
+      <div id="adv">
+        <label for="similarity">Kemiripan suara</label>
+        <div class="range"><input type="range" id="similarity" min="0" max="1" step="0.05" value="0.75"><output id="o-similarity">0.75</output></div>
+        <label for="style">Gaya</label>
+        <div class="range"><input type="range" id="style" min="0" max="1" step="0.05" value="0"><output id="o-style">0</output></div>
+        <label for="speed">Kecepatan</label>
+        <div class="range"><input type="range" id="speed" min="0.7" max="1.2" step="0.05" value="1"><output id="o-speed">1</output></div>
+      </div>
+      <p class="hint" id="v3note" hidden>Model v3 hanya memakai stabilitas dengan nilai 0, 0.5, atau 1.</p>
+    </aside>
+  </div>
+
+  <section class="panel stage" aria-label="Hasil">
+    <h2>Hasil</h2>
+    <div class="empty" id="empty">Hasil suara akan muncul di sini setelah kamu menekan “Buat suara”.</div>
+    <div id="result" hidden>
+      <canvas id="wave" aria-label="Gelombang suara. Klik untuk berpindah posisi."></canvas>
+      <audio id="player" controls></audio>
+      <div class="row" style="margin-top:12px"><a class="ghost" id="dl" download>Unduh MP3</a></div>
+    </div>
+  </section>
+
+  <section class="panel stage" id="hist-wrap" hidden>
+    <h2>Riwayat sesi ini</h2>
+    <ul class="history" id="history"></ul>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem(k) }catch(e){ return null } },
+  set(k,v){ try{ localStorage.setItem(k,v) }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k) }catch(e){} }
+};
+
+// --- Pengaturan tersimpan
+const savedKey = store.get('janu_key');
+if (savedKey){ $('key').value = savedKey; $('remember').checked = true; }
+
+// --- Slider & model
+['stability','similarity','style','speed'].forEach(id=>{
+  const el=$(id), out=$('o-'+id);
+  el.addEventListener('input',()=>{ out.textContent=el.value; });
+});
+const isTagModel = m => /v3|v4/i.test(m);
+function syncModel(){
+  const v3 = isTagModel($('model').value);
+  $('adv').hidden = v3; $('v3note').hidden = !v3;
+  $('stability').step = v3 ? 0.5 : 0.05;
+  if (v3){ const s=Math.round($('stability').value*2)/2; $('stability').value=s; $('o-stability').textContent=s; }
+}
+$('model').addEventListener('input',syncModel); syncModel();
+
+// --- Teks & tag
+const text=$('text');
+function updateCount(){ $('count').textContent = text.value.length.toLocaleString('id-ID')+' / 5000'; }
+text.addEventListener('input',updateCount); updateCount();
+document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{
+  const t=b.dataset.tag+' ', s=text.selectionStart, e=text.selectionEnd;
+  text.value = text.value.slice(0,s)+t+text.value.slice(e);
+  text.focus(); text.selectionStart=text.selectionEnd=s+t.length; updateCount();
+}));
+
+// --- Status
+function setStatus(msg,type){ const s=$('status'); s.textContent=msg; s.className='status'+(type?' '+type:''); }
+
+// --- Panggil API
+async function generate(){
+  const key=$('key').value.trim(), voice=$('voice').value.trim(), model=$('model').value.trim(), t=text.value.trim();
+  if(!key) return setStatus('Isi API key ElevenLabs di kolom Pengaturan.','err');
+  if(!voice) return setStatus('Voice ID tidak boleh kosong.','err');
+  if(!t) return setStatus('Tulis teks yang ingin diucapkan.','err');
+
+  if($('remember').checked) store.set('janu_key',key); else store.del('janu_key');
+
+  const body={ text:t, model_id:model };
+  if(isTagModel(model)){
+    body.voice_settings={ stability: Math.round($('stability').value*2)/2 };
+  } else {
+    body.voice_settings={
+      stability:+$('stability').value, similarity_boost:+$('similarity').value,
+      style:+$('style').value, speed:+$('speed').value, use_speaker_boost:true
+    };
+  }
+
+  $('go').disabled=true; setStatus('Sedang membuat suara…');
+  try{
+    const res=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+encodeURIComponent(voice)+'?output_format=mp3_44100_128',{
+      method:'POST',
+      headers:{'xi-api-key':key,'Content-Type':'application/json','Accept':'audio/mpeg'},
+      body:JSON.stringify(body)
+    });
+    if(!res.ok) throw new Error(await explain(res));
+    const blob=await res.blob();
+    show(blob,t);
+    setStatus('Selesai.','ok');
+  }catch(err){
+    setStatus(err.message || 'Gagal terhubung ke ElevenLabs. Periksa koneksi internet.','err');
+  }finally{ $('go').disabled=false; }
+}
+
+async function explain(res){
+  let detail=''; try{ const j=await res.json(); detail=(j.detail&&(j.detail.message||j.detail))||''; if(typeof detail!=='string') detail=JSON.stringify(detail); }catch(e){}
+  if(res.status===401) return 'API key ditolak. Periksa kembali key dan izin text-to-speech-nya.';
+  if(res.status===402||/quota|payment|paid/i.test(detail)) return 'Kuota atau paket tidak mencukupi. Suara dari voice library biasanya butuh paket berbayar. '+detail;
+  if(res.status===404) return 'Voice ID tidak ditemukan di akunmu. Tambahkan suara Janu ke akun terlebih dahulu.';
+  if(res.status===422) return 'Permintaan tidak valid: '+(detail||'cek model dan teks.');
+  if(res.status===429) return 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.';
+  return 'Error '+res.status+(detail?': '+detail:'.');
+}
+
+// --- Hasil, gelombang, riwayat
+const player=$('player'), canvas=$('wave'); let peaks=[];
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+async function show(blob,t){
+  const url=URL.createObjectURL(blob);
+  player.src=url; $('dl').href=url; $('dl').download=fileName();
+  $('empty').hidden=true; $('result').hidden=false;
+  await computePeaks(blob); draw(0); player.play().catch(()=>{});
+  addHistory(url,t);
+}
+function fileName(){ return 'janu-'+new Date().toISOString().replace(/[-:T]/g,'').slice(0,14)+'.mp3'; }
+
+async function computePeaks(blob){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext, ctx=new AC();
+    const buf=await ctx.decodeAudioData(await blob.arrayBuffer()); ctx.close();
+    const d=buf.getChannelData(0), n=Math.max(40,Math.floor(canvas.clientWidth/4)), step=Math.floor(d.length/n);
+    peaks=[]; for(let i=0;i<n;i++){ let m=0; for(let j=i*step;j<(i+1)*step;j++){ const v=Math.abs(d[j]); if(v>m)m=v; } peaks.push(m); }
+    const top=Math.max(...peaks)||1; peaks=peaks.map(p=>p/top);
+  }catch(e){ peaks=[]; }
+}
+function draw(progress){
+  const dpr=window.devicePixelRatio||1, w=canvas.clientWidth, h=canvas.clientHeight;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const c=canvas.getContext('2d'); c.scale(dpr,dpr); c.clearRect(0,0,w,h);
+  if(!peaks.length) return;
+  const bw=w/peaks.length;
+  peaks.forEach((p,i)=>{
+    const bh=Math.max(3,p*(h-8));
+    c.fillStyle = (i/peaks.length)<progress ? css('--accent') : css('--wave');
+    c.fillRect(i*bw+1,(h-bh)/2,Math.max(1,bw-2),bh);
+  });
+}
+player.addEventListener('timeupdate',()=>draw(player.duration?player.currentTime/player.duration:0));
+canvas.addEventListener('click',e=>{
+  if(!player.duration) return;
+  const r=canvas.getBoundingClientRect(); player.currentTime=((e.clientX-r.left)/r.width)*player.duration;
+});
+window.addEventListener('resize',()=>draw(player.duration?player.currentTime/player.duration:0));
+
+function addHistory(url,t){
+  $('hist-wrap').hidden=false;
+  const li=document.createElement('li');
+  const span=document.createElement('span'); span.className='t'; span.textContent=t;
+  const play=document.createElement('button'); play.className='ghost'; play.textContent='Putar';
+  play.onclick=()=>{ player.src=url; $('dl').href=url; player.play(); };
+  const a=document.createElement('a'); a.className='ghost'; a.textContent='Unduh'; a.href=url; a.download=fileName();
+  li.append(span,play,a); $('history').prepend(li);
+}
+
+$('go').addEventListener('click',generate);
+text.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter') generate(); });
+</script>
+</body>
+</html>
